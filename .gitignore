@@ -32,6 +32,7 @@ SampleScene.unity
 .vs/
 
 .vscode
+.vsconfig
 
 # Gradle cache directory
 .gradle/
