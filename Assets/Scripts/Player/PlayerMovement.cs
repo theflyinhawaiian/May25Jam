@@ -1,109 +1,63 @@
-using UnityEditor.Build;
 using UnityEngine;
-using UnityEngine.Scripting;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("References")]
-    public PlayerMovementStats MoveStats;
-    [SerializeField] private Collider2D _feetColl;
-    [SerializeField] private Collider2D _bodyColl;
 
-    private Rigidbody2D _rb;
+    [Header("Movement Parameters")]
+    public float moveSpeed = 5f;
 
-    //movement vars
-    private Vector2 _moveVelocity;
-    private bool _isFacingRight;
+    [Header("Jumping Parameters")]
+    public float jumpForce = 10f;
+    public LayerMask groundLayer;
 
-    //collision check vars
-    private RaycastHit2D _groundHit;
-    private RaycastHit2D _headHit;
-    private bool _isGrounded;
-    private bool _bumpedHead;
+    [Header("Gravity Modifiers")]
+    public float lowJumpMultiplier = 2f;
+
+    private Rigidbody2D rb;
+    private Collider2D collider2d;
+    private bool isGrounded;
 
     private void Awake()
     {
-        _isFacingRight = true;
+        rb = GetComponent<Rigidbody2D>();
+        collider2d = GetComponent<Collider2D>();
+    }
+    private void Update()
+    {
+        CheckGrounded();
+        HandleSideViewMovement();
 
-        _rb = GetComponent<Rigidbody2D>();
+        if (Input.GetButtonDown("Jump")) //space
+            TryJump();
+
+        if (rb.linearVelocity.y > 0)
+            rb.linearVelocity += (lowJumpMultiplier - 1) * Physics2D.gravity.y * Time.deltaTime * Vector2.up;
     }
 
-    private void FixedUpdate()
+    private void HandleSideViewMovement()
     {
-        CollisionChecks();
-
-        if (_isGrounded)
-            Move(MoveStats.GroundAcceleration, MoveStats.GroundDeceleration, InputManager.Movement);
-        else
-            Move(MoveStats.AirAcceleration, MoveStats.AirDeceleration, InputManager.Movement);
+        float horizontalInput = Input.GetAxis("Horizontal");
+        float speed = moveSpeed;
+        Move(horizontalInput, speed);
     }
 
-    #region Movement
-
-    private void Move(float acceleration, float deceleration, Vector2 moveInput)
+    private void CheckGrounded()
     {
-        if (moveInput != Vector2.zero)
-        {
-            TurnCheck(moveInput);
-
-            Vector2 targetVelocity = Vector2.zero;
-            if (InputManager.RunIsHeld)
-                targetVelocity = new Vector2(moveInput.x, 0f) * MoveStats.MaxRunSpeed;
-            else
-                targetVelocity = new Vector2(moveInput.x, 0f) * MoveStats.MaxWalkSpeed;
-
-            _moveVelocity = Vector2.Lerp(_moveVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-            _rb.linearVelocity = new Vector2(_moveVelocity.x, _rb.linearVelocity.y);
-        }
-        else if (moveInput == Vector2.zero)
-        {
-            _moveVelocity = Vector2.Lerp(_moveVelocity, Vector2.zero, deceleration * Time.fixedDeltaTime);
-            _rb.linearVelocity = new Vector2(_moveVelocity.x, _rb.linearVelocity.y);
-        }
+        isGrounded = Physics2D.IsTouchingLayers(collider2d, groundLayer);
     }
 
-    private void TurnCheck(Vector2 moveInput)
+    private void Move(float horizontalInput, float speed)
     {
-        if (_isFacingRight && moveInput.x < 0)
-            Turn(false);
-
-        else if (!_isFacingRight && moveInput.x > 0)
-            Turn(true);
+        Vector2 moveVelocity = new(horizontalInput * speed, rb.linearVelocity.y);
+        rb.linearVelocity = moveVelocity;
     }
 
-    private void Turn(bool turnRight)
+    private void TryJump()
     {
-        if (turnRight)
+        if (isGrounded)
         {
-            _isFacingRight = true;
-            transform.Rotate(0f, 180f, 0f);
-        }
-        else
-        {
-            _isFacingRight = false;
-            transform.Rotate(0f, -180f, 0f);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
     }
-    #endregion Movement
 
-    #region Collision Checks
-
-    private void IsGrounded()
-    {
-        Vector2 boxCastOrigion = new Vector2(_feetColl.bounds.center.x, _feetColl.bounds.min.y);
-        Vector2 boxCastSize = new Vector2(_feetColl.bounds.size.x, MoveStats.GroundDetectionRayLength);
-
-        _groundHit = Physics2D.BoxCast(boxCastOrigion, boxCastSize, 0f, Vector2.down, MoveStats.GroundDetectionRayLength, MoveStats.GroundLayer);
-        if (_groundHit.collider != null)
-            _isGrounded = true;
-        else
-            _isGrounded = false;
-    }
-
-    private void CollisionChecks()
-    {
-        IsGrounded();
-    }
-
-    #endregion Collision Checks
 }
