@@ -11,7 +11,7 @@ public class PlayerMovement : MonoBehaviour
     public LayerMask groundLayer;
 
     [Header("Gravity Modifiers")]
-    public float lowJumpMultiplier = 2f;
+    public float ascentGravityMultiplier = 2f;
 
     private Rigidbody2D rb;
     private Collider2D collider2d;
@@ -22,16 +22,20 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         collider2d = GetComponent<Collider2D>();
     }
+
     private void Update()
     {
         CheckGrounded();
         HandleSideViewMovement();
 
-        if (Input.GetButtonDown("Jump")) //space
+        if (Input.GetButtonDown("Jump"))
             TryJump();
 
         if (rb.linearVelocity.y > 0)
-            rb.linearVelocity += (lowJumpMultiplier - 1) * Physics2D.gravity.y * Time.deltaTime * Vector2.up;
+            rb.linearVelocity += (ascentGravityMultiplier - 1) * Physics2D.gravity.y * Time.deltaTime * Vector2.up;
+
+        if (rb.linearVelocity.y > 0 && rb.linearVelocity.y < 1f)
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0);
     }
 
     private void HandleSideViewMovement()
